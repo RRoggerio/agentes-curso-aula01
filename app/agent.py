@@ -1,56 +1,63 @@
 # app/agent.py
-# Define o agente ReAct mínimo com uma ferramenta de exemplo.
+# Ferramentas e modelo do agente. O grafo (graph.py) consome o que está aqui.
 
 import os
 from dotenv import load_dotenv
 from langchain.tools import tool
-from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
+import unicodedata
 
-# Carrega as variáveis do .env para o ambiente do processo
 load_dotenv()
 
 
-# --- Ferramenta de exemplo -------------------------------------------------
-# O decorator @tool transforma a função em uma ferramenta que o agente pode chamar.
-# A docstring é importante: o modelo a lê para decidir QUANDO usar a ferramenta.
+# --- Ferramenta 1: calculadora (da Aula 1) ---
 @tool
 def calculator(expression: str) -> str:
     """Avalia uma expressão aritmética simples (ex.: '3 * (4 + 2)').
-    Use esta ferramenta sempre que precisar de um cálculo exato em vez de estimar."""
+    Use para cálculos exatos em vez de estimar."""
     try:
-        # eval restrito: sem acesso a builtins, apenas aritmética.
-        result = eval(expression, {"__builtins__": {}}, {})
-        return str(result)
+        return str(eval(expression, {"__builtins__": {}}, {}))
     except Exception as exc:
         return f"Erro ao calcular: {exc}"
 
 
-# --- Prompt de sistema -----------------------------------------------------
-# Define o papel e as regras do agente. Claro, direto, sem excesso.
+# --- Ferramenta 2: base de conhecimento SIMULADA ---
+# Placeholder em memória. Na Aula 3 isto vira RAG real com PostgreSQL + pgvector.
+KNOWLEDGE_BASE = {
+    "horario de atendimento": "O atendimento funciona de segunda a sexta, das 9h às 18h.",
+    "politica de reembolso": "Reembolsos podem ser solicitados em até 30 dias após a compra.",
+    "prazo de entrega": "O prazo médio de entrega é de 5 a 7 dias úteis.",
+}
+
+def _normalizar(texto: str) -> str:
+    # remove acentos e baixa a caixa, para comparar de forma robusta
+    nfkd = unicodedata.normalize("NFKD", texto.lower())
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+@tool
+def knowledge_lookup(topic: str) -> str:
+    """Consulta a base de conhecimento interna sobre políticas e informações
+    da empresa (horário, reembolso, prazo de entrega). Use quando a pergunta
+    for sobre regras ou informações institucionais."""
+    topic_norm = _normalizar(topic)
+    for key, value in KNOWLEDGE_BASE.items():
+        key_norm = _normalizar(key)
+        if key_norm in topic_norm or topic_norm in key_norm:
+            return value
+    return "Não encontrei essa informação na base de conhecimento."
+
+
+# --- Conjunto de ferramentas e modelo ---
+TOOLS = [calculator, knowledge_lookup]
+
 SYSTEM_PROMPT = (
     "Você é um assistente objetivo e confiável. "
-    "Quando a pergunta envolver um cálculo exato, use a ferramenta calculator "
-    "em vez de estimar de cabeça. Responda em português, de forma concisa."
+    "Use 'calculator' para cálculos exatos e 'knowledge_lookup' para perguntas "
+    "sobre políticas e informações da empresa. Responda em português, de forma concisa."
 )
 
-
-# --- Construção do agente --------------------------------------------------
-def build_agent():
-    """Monta e retorna o agente ReAct. Chamado uma vez na inicialização da API."""
-    model = ChatOpenAI(
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        temperature=0,  # determinístico: bom para tarefas com ferramentas
-    )
-
-    # create_agent já implementa o laço ReAct sobre o runtime do LangGraph.
-    agent = create_agent(
-        model=model,
-        tools=[calculator],
-        system_prompt=SYSTEM_PROMPT,
-    )
-    return agent
-
-
-# Instância única reutilizada pela API (evita reconstruir a cada requisição).
-agent = build_agent()
+def build_model():
+    """Cria o modelo já com as ferramentas vinculadas (tool calling)."""
+    model = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"), temperature=0)
+    # bind_tools informa ao modelo quais ferramentas ele pode chamar.
+    return model.bind_tools(TOOLS)
