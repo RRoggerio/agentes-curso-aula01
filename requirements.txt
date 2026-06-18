@@ -10,10 +10,15 @@ uvicorn[standard]>=0.32
 # --- Observabilidade ---
 langfuse>=3.0
 
+# --- RAG e memória (Aula 3) ---
+langchain-postgres>=0.0.17
+langgraph-checkpoint-postgres>=2.0
+langchain-text-splitters>=0.3
+
 # --- Utilidades ---
 pydantic>=2.9
 python-dotenv>=1.0
 
-# --- Já preparando as próximas aulas (RAG / memória) ---
+# --- Banco / drivers ---
 psycopg[binary]>=3.2
 pgvector>=0.3

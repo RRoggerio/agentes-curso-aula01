@@ -1,19 +1,18 @@
 # app/main.py
-# API FastAPI que expõe o grafo do agente, instrumentado no Langfuse.
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 from langfuse.langchain import CallbackHandler
 
-from app.graph import graph   # agora importamos o GRAFO, não o agente
+from app.graph import graph
 
 langfuse_handler = CallbackHandler()
-
-app = FastAPI(title="Agente de IA — Aula 2")
+app = FastAPI(title="Agente de IA — Aula 3")
 
 
 class ChatRequest(BaseModel):
     message: str
+    thread_id: str = "default"   # identifica a conversa (memória)
+
 
 class ChatResponse(BaseModel):
     answer: str
@@ -26,11 +25,11 @@ def health():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    """Executa o grafo do agente e devolve a resposta final."""
     state = {"messages": [{"role": "user", "content": req.message}]}
-
-    # O callback do Langfuse captura TODO o grafo: cada nó, cada ferramenta.
-    result = graph.invoke(state, config={"callbacks": [langfuse_handler]})
-
-    final_message = result["messages"][-1]
-    return ChatResponse(answer=final_message.content)
+    # thread_id habilita a memória; callbacks habilitam a observabilidade.
+    config = {
+        "configurable": {"thread_id": req.thread_id},
+        "callbacks": [langfuse_handler],
+    }
+    result = graph.invoke(state, config=config)
+    return ChatResponse(answer=result["messages"][-1].content)

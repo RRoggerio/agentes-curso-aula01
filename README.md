@@ -1,7 +1,7 @@
-# Agentes de IA — Projeto do Curso (Aula 1)
+# Agentes de IA — Projeto do Curso (Aula 3)
 
-> **AGENTES DE IA: A revolução da IA** · Aula 1 — Fundamentos + Setup do Projeto
-> Agente ReAct mínimo com FastAPI, observabilidade no Langfuse, empacotado em Docker e pronto para deploy no Render.
+> **AGENTES DE IA: A revolução da IA** · Aula 3 — RAG real (PostgreSQL + pgvector) + memória entre interações
+> Agente com RAG real sobre PostgreSQL + pgvector e memória de conversa (checkpointer + thread_id), exposto por FastAPI, observável no Langfuse, em Docker e publicado no Render.
 
 Este é o ponto de partida do projeto multiagente do curso. A cada aula adicionamos uma
 camada (memória, RAG com PostgreSQL + pgvector, mais ferramentas, orquestração
@@ -34,8 +34,12 @@ Infraestrutura, frameworks e RAG são open-source; o LLM começa na OpenAI e é 
 agentes-curso/
 ├── app/
 │   ├── __init__.py
-│   ├── agent.py        # definição do agente (LangGraph + LangChain)
-│   └── main.py         # API FastAPI que expõe o agente
+│   ├── agent.py        # ferramentas (calculator, knowledge_search via RAG) + modelo
+│   ├── rag.py          # conexão pgvector, embeddings e vector store
+│   ├── ingest.py       # script de ingestão (indexação offline do RAG)
+│   ├── graph.py        # StateGraph compilado com checkpointer (memória)
+│   └── main.py         # API FastAPI; /chat recebe thread_id (memória)
+├── docs/               # documentos do domínio para ingerir
 ├── .env.example        # modelo de segredos (versionar)
 ├── .gitignore
 ├── .dockerignore
@@ -164,6 +168,29 @@ restante do código permanece igual.
 | `ModuleNotFoundError` | `.venv` inativo / deps faltando | Reative o `.venv` e reinstale o `requirements.txt` |
 | `ImportError: create_agent` | LangChain antigo | Garanta `langchain>=1.0` |
 | Render: "No open ports detected" | App não escutou em `0.0.0.0:$PORT` | Confira o `CMD` do `Dockerfile` |
+
+---
+
+## RAG e memória (novidades da Aula 3)
+
+### Subir o PostgreSQL + pgvector (local)
+```bash
+docker run -d --name pgvector-db \
+  -e POSTGRES_USER=agente -e POSTGRES_PASSWORD=segredo -e POSTGRES_DB=agentedb \
+  -p 5432:5432 pgvector/pgvector:pg16
+```
+Configure a `DATABASE_URL` no `.env` (note o `+psycopg` na URL).
+
+### Ingerir documentos (indexação)
+Coloque os arquivos `.txt`/`.md` do domínio em `docs/` e rode:
+```bash
+python -m app.ingest
+```
+
+### Memória
+O grafo é compilado com um checkpointer. Cada conversa usa um `thread_id`
+(enviado no corpo do `/chat`). Em desenvolvimento, a memória fica no processo
+(`InMemorySaver`); defina `USE_PG_MEMORY=1` para persistir no PostgreSQL.
 
 ---
 
