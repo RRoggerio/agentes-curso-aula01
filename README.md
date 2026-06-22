@@ -1,7 +1,7 @@
-# Agentes de IA — Projeto do Curso (Aula 3)
+# Agentes de IA — Projeto do Curso (Aula 4)
 
-> **AGENTES DE IA: A revolução da IA** · Aula 3 — RAG real (PostgreSQL + pgvector) + memória entre interações
-> Agente com RAG real sobre PostgreSQL + pgvector e memória de conversa (checkpointer + thread_id), exposto por FastAPI, observável no Langfuse, em Docker e publicado no Render.
+> **AGENTES DE IA: A revolução da IA** · Aula 4 — Tools, function calling e integração com APIs reais
+> Agente com RAG (pgvector), memória (checkpointer) e ferramentas que integram APIs HTTP reais com tratamento de erros, exposto por FastAPI, observável no Langfuse, em Docker e publicado no Render.
 
 Este é o ponto de partida do projeto multiagente do curso. A cada aula adicionamos uma
 camada (memória, RAG com PostgreSQL + pgvector, mais ferramentas, orquestração
@@ -34,7 +34,8 @@ Infraestrutura, frameworks e RAG são open-source; o LLM começa na OpenAI e é 
 agentes-curso/
 ├── app/
 │   ├── __init__.py
-│   ├── agent.py        # ferramentas (calculator, knowledge_search via RAG) + modelo
+│   ├── agent.py        # ferramentas (calculator, knowledge_search, lookup_cep) + modelo
+│   ├── tools_externas.py # ferramenta que chama uma API HTTP real (com tratamento de erros)
 │   ├── rag.py          # conexão pgvector, embeddings e vector store
 │   ├── ingest.py       # script de ingestão (indexação offline do RAG)
 │   ├── graph.py        # StateGraph compilado com checkpointer (memória)
@@ -191,6 +192,16 @@ python -m app.ingest
 O grafo é compilado com um checkpointer. Cada conversa usa um `thread_id`
 (enviado no corpo do `/chat`). Em desenvolvimento, a memória fica no processo
 (`InMemorySaver`); defina `USE_PG_MEMORY=1` para persistir no PostgreSQL.
+
+---
+
+## Ferramentas de integração (novidade da Aula 4)
+
+A ferramenta `lookup_cep` (em `app/tools_externas.py`) chama uma API HTTP real
+(ViaCEP) com timeout, tratamento de erros e validação de entrada/saída. O padrão
+serve para qualquer API: troque a URL, adicione autenticação via `.env` e mantenha
+o tratamento de erro. Chaves de API nunca vão no código nem no Git — use o `.env`
+(local) e as variáveis de ambiente do Render (produção).
 
 ---
 

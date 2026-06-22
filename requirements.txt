@@ -22,3 +22,6 @@ python-dotenv>=1.0
 # --- Banco / drivers ---
 psycopg[binary]>=3.2
 pgvector>=0.3
+
+# --- Cliente HTTP para ferramentas de integração (Aula 4) ---
+httpx>=0.27

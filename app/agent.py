@@ -8,6 +8,7 @@ from langchain_core.tools.retriever import create_retriever_tool
 from langchain_openai import ChatOpenAI
 
 from app.rag import get_vector_store
+from app.tools_externas import lookup_cep
 
 load_dotenv()
 
@@ -39,13 +40,15 @@ knowledge_search = create_retriever_tool(
 
 
 # --- Conjunto de ferramentas e modelo ---
-TOOLS = [calculator, knowledge_search]
+TOOLS = [calculator, knowledge_search, lookup_cep]
 
 SYSTEM_PROMPT = (
     "Você é um assistente objetivo e confiável. "
-    "Use 'calculator' para cálculos exatos e 'knowledge_search' para perguntas "
-    "sobre políticas e informações da empresa. Responda SEMPRE com base nos "
-    "trechos recuperados; se não encontrar, diga que não sabe. Responda em português."
+    "Use 'calculator' para cálculos exatos, 'knowledge_search' para perguntas "
+    "sobre políticas e informações da empresa, e 'lookup_cep' para consultar "
+    "endereços a partir de um CEP. Responda com base nos resultados das ferramentas; "
+    "se a busca de conhecimento não encontrar, diga que não sabe; se uma ferramenta "
+    "falhar, explique. Responda em português, de forma concisa."
 )
 
 
