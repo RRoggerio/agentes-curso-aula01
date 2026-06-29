@@ -1,7 +1,7 @@
-# Agentes de IA — Projeto do Curso (Aula 4)
+# Agentes de IA — Projeto do Curso (Aula 5)
 
-> **AGENTES DE IA: A revolução da IA** · Aula 4 — Tools, function calling e integração com APIs reais
-> Agente com RAG (pgvector), memória (checkpointer) e ferramentas que integram APIs HTTP reais com tratamento de erros, exposto por FastAPI, observável no Langfuse, em Docker e publicado no Render.
+> **AGENTES DE IA: A revolução da IA** · Aula 5 — LangGraph a fundo: subgrafos e human-in-the-loop (aprovação humana)
+> Agente com RAG, memória e ferramentas (Aulas 3-4) e um fluxo de human-in-the-loop: pausa numa ação crítica, espera aprovação humana (interrupt) e retoma (Command resume). Exposto por FastAPI, observável no Langfuse, em Docker e publicado no Render.
 
 Este é o ponto de partida do projeto multiagente do curso. A cada aula adicionamos uma
 camada (memória, RAG com PostgreSQL + pgvector, mais ferramentas, orquestração
@@ -38,8 +38,8 @@ agentes-curso/
 │   ├── tools_externas.py # ferramenta que chama uma API HTTP real (com tratamento de erros)
 │   ├── rag.py          # conexão pgvector, embeddings e vector store
 │   ├── ingest.py       # script de ingestão (indexação offline do RAG)
-│   ├── graph.py        # StateGraph compilado com checkpointer (memória)
-│   └── main.py         # API FastAPI; /chat recebe thread_id (memória)
+│   ├── graph.py        # grafo do agente + approval_graph (human-in-the-loop)
+│   └── main.py         # API FastAPI; /chat (agente) + /action e /resume (HITL)
 ├── docs/               # documentos do domínio para ingerir
 ├── .env.example        # modelo de segredos (versionar)
 ├── .gitignore
@@ -202,6 +202,22 @@ A ferramenta `lookup_cep` (em `app/tools_externas.py`) chama uma API HTTP real
 serve para qualquer API: troque a URL, adicione autenticação via `.env` e mantenha
 o tratamento de erro. Chaves de API nunca vão no código nem no Git — use o `.env`
 (local) e as variáveis de ambiente do Render (produção).
+
+---
+
+## Human-in-the-loop (novidade da Aula 5)
+
+O `approval_graph` (em `app/graph.py`) demonstra a aprovação humana: o fluxo
+`propor -> aprovacao -> executar` pausa no nó de aprovação com `interrupt()` e só
+continua quando retomado com `Command(resume=...)`. O checkpointer (Aula 3) é o que
+sustenta a pausa.
+
+### Endpoints
+- `POST /chat` — agente conversacional com ferramentas e memória (Aulas 2-4).
+- `POST /action` — dispara o fluxo com aprovação; se pausar, devolve a ação proposta.
+- `POST /resume` — retoma com `{"decision": "aprovar"|"rejeitar", "thread_id": "..."}`.
+
+Use o mesmo `thread_id` em `/action` e `/resume` para retomar a conversa certa.
 
 ---
 
