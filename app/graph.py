@@ -51,7 +51,7 @@ _checkpointer = build_checkpointer()
 
 
 # --- Grafo do agente conversacional (Aulas 2-4) ---
-def build_graph():
+def build_graph_():
     builder = StateGraph(AgentState)
     builder.add_node("model", model_node)
     builder.add_node("tools", tool_node)
@@ -61,7 +61,7 @@ def build_graph():
     return builder.compile(checkpointer=_checkpointer)
 
 
-graph = build_graph()
+graph = build_graph_()
 
 
 # ===================== HUMAN-IN-THE-LOOP (Aula 5) =====================
@@ -95,6 +95,24 @@ def executar_acao_node(state: AgentState) -> dict:
     else:
         msg = "Ação cancelada pela revisão humana."
     return {"messages": [{"role": "assistant", "content": msg}], "pending_action": None}
+
+
+def build_graph():
+    builder = StateGraph(AgentState)
+    builder.add_node("propor", propor_acao_node)
+    builder.add_node("aprovacao", aprovacao_humana_node)
+    builder.add_node("executar", executar_acao_node)
+
+    builder.add_edge(START, "propor")
+    builder.add_edge("propor", "aprovacao")
+    builder.add_edge("aprovacao", "executar")
+    builder.add_edge("executar", END)
+
+    # O MESMO checkpointer da Aula 3 sustenta memória E a pausa/retomada.
+    return builder.compile(checkpointer=build_checkpointer())
+
+
+graph = build_graph()
 
 
 def build_approval_graph():
