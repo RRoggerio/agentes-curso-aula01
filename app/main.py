@@ -1,12 +1,9 @@
-# app/main.py
-# API FastAPI: agente conversacional (/chat) + fluxo human-in-the-loop (/action, /resume).
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 from langfuse.langchain import CallbackHandler
 from langgraph.types import Command
 
-from app.graph import graph, approval_graph
+from app.graph import graph
 
 langfuse_handler = CallbackHandler()
 app = FastAPI(title="Agente de IA — Aula 5")
@@ -15,12 +12,6 @@ app = FastAPI(title="Agente de IA — Aula 5")
 class ChatRequest(BaseModel):
     message: str
     thread_id: str = "default"
-
-
-class ActionRequest(BaseModel):
-    message: str
-    thread_id: str = "default"
-
 
 class ResumeRequest(BaseModel):
     decision: str           # "aprovar" ou "rejeitar"
@@ -38,21 +29,15 @@ def health():
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    """Agente conversacional com ferramentas e memória (Aulas 2-4)."""
-    state = {"messages": [{"role": "user", "content": req.message}],
-             "pending_action": None, "approved": None}
+    """Executa o grafo. Se ele pausar numa aprovação, devolve a ação proposta."""
+    state = {
+        "messages": [{"role": "user", "content": req.message}],
+        "pending_action": None, "approved": None,
+    }
     result = graph.invoke(state, config=_config(req.thread_id))
-    return {"status": "concluido", "answer": result["messages"][-1].content}
 
-
-@app.post("/action")
-def action(req: ActionRequest):
-    """Dispara o fluxo com aprovação humana. Se pausar, devolve a ação proposta."""
-    state = {"messages": [{"role": "user", "content": req.message}],
-             "pending_action": None, "approved": None}
-    approval_graph.invoke(state, config=_config(req.thread_id))
-
-    snapshot = approval_graph.get_state(_config(req.thread_id))
+    # Se o grafo pausou, há uma interrupção pendente no estado.
+    snapshot = graph.get_state(_config(req.thread_id))
     if snapshot.interrupts:
         payload = snapshot.interrupts[0].value
         return {
@@ -60,12 +45,14 @@ def action(req: ActionRequest):
             "acao_proposta": payload.get("acao_proposta"),
             "pergunta": payload.get("pergunta"),
         }
-    return {"status": "concluido"}
+
+    # Caso não tenha pausado, devolve a resposta final normalmente.
+    return {"status": "concluido", "answer": result["messages"][-1].content}
 
 
 @app.post("/resume")
 def resume(req: ResumeRequest):
-    """Retoma o fluxo pausado com a decisão humana (aprovar/rejeitar)."""
+    """Retoma o grafo pausado com a decisão humana."""
     # Command(resume=...) entrega o valor ao interrupt() que estava esperando.
-    result = approval_graph.invoke(Command(resume=req.decision), config=_config(req.thread_id))
+    result = graph.invoke(Command(resume=req.decision), config=_config(req.thread_id))
     return {"status": "concluido", "answer": result["messages"][-1].content}
