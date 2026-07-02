@@ -4,7 +4,6 @@
 import os
 from dotenv import load_dotenv
 from langchain.tools import tool
-from langchain_core.tools.retriever import create_retriever_tool
 from langchain_openai import ChatOpenAI
 
 from app.rag import get_vector_store
@@ -25,18 +24,30 @@ def calculator(expression: str) -> str:
 
 
 # --- Ferramenta 2: recuperação REAL (RAG) no lugar da base simulada ---
-# O retriever busca os trechos mais similares à pergunta no pgvector.
-_retriever = get_vector_store().as_retriever(search_kwargs={"k": 4})
+# O retriever é criado sob demanda (lazy): assim o serviço sobe no Render
+# sem precisar conectar ao banco no momento do import/deploy.
+_retriever = None
 
-knowledge_search = create_retriever_tool(
-    _retriever,
-    name="knowledge_search",
-    description=(
-        "Busca informações sobre políticas e conhecimento do domínio na base "
-        "de conhecimento da empresa. Use para qualquer pergunta sobre regras, "
-        "procedimentos ou informações institucionais."
-    ),
-)
+
+def _get_retriever():
+    global _retriever
+    if _retriever is None:
+        _retriever = get_vector_store().as_retriever(search_kwargs={"k": 4})
+    return _retriever
+
+
+@tool
+def knowledge_search(query: str) -> str:
+    """Busca informações sobre políticas e conhecimento do domínio na base
+    de conhecimento da empresa. Use para qualquer pergunta sobre regras,
+    procedimentos ou informações institucionais."""
+    try:
+        docs = _get_retriever().invoke(query)
+    except Exception as exc:
+        return f"Erro ao consultar a base de conhecimento: {exc}"
+    if not docs:
+        return "Nenhuma informação encontrada na base de conhecimento."
+    return "\n\n".join(doc.page_content for doc in docs)
 
 
 # --- Conjunto de ferramentas e modelo ---

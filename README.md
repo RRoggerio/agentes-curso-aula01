@@ -1,7 +1,7 @@
-# Agentes de IA — Projeto do Curso (Aula 5)
+# Agentes de IA — Projeto do Curso (Aula 6)
 
-> **AGENTES DE IA: A revolução da IA** · Aula 5 — LangGraph a fundo: subgrafos e human-in-the-loop (aprovação humana)
-> Agente com RAG, memória e ferramentas (Aulas 3-4) e um fluxo de human-in-the-loop: pausa numa ação crítica, espera aprovação humana (interrupt) e retoma (Command resume). Exposto por FastAPI, observável no Langfuse, em Docker e publicado no Render.
+> **AGENTES DE IA: A revolução da IA** · Aula 6 — IA Agêntica nos Negócios: métrica de negócio instrumentada no agente
+> Agente completo (RAG, memória, ferramentas, human-in-the-loop) agora com uma métrica de NEGÓCIO instrumentada: um contador de eventos de valor exposto em /metrics, complementando a observabilidade técnica do Langfuse. Exposto por FastAPI, em Docker e publicado no Render.
 
 Este é o ponto de partida do projeto multiagente do curso. A cada aula adicionamos uma
 camada (memória, RAG com PostgreSQL + pgvector, mais ferramentas, orquestração
@@ -39,7 +39,8 @@ agentes-curso/
 │   ├── rag.py          # conexão pgvector, embeddings e vector store
 │   ├── ingest.py       # script de ingestão (indexação offline do RAG)
 │   ├── graph.py        # grafo do agente + approval_graph (human-in-the-loop)
-│   └── main.py         # API FastAPI; /chat (agente) + /action e /resume (HITL)
+│   ├── metrics.py      # métrica de NEGÓCIO: contador de eventos de valor
+│   └── main.py         # API FastAPI; /chat, /action, /resume + /metrics (negócio)
 ├── docs/               # documentos do domínio para ingerir
 ├── .env.example        # modelo de segredos (versionar)
 ├── .gitignore
@@ -218,6 +219,24 @@ sustenta a pausa.
 - `POST /resume` — retoma com `{"decision": "aprovar"|"rejeitar", "thread_id": "..."}`.
 
 Use o mesmo `thread_id` em `/action` e `/resume` para retomar a conversa certa.
+
+---
+
+## Métrica de negócio (novidade da Aula 6)
+
+Esta aula é estratégica: o foco é ROI, business case e gestão de mudança. No código,
+a única adição é uma instrumentação leve de valor — `app/metrics.py` conta eventos de
+negócio (ex.: `tarefas_concluidas`, `acoes_aprovadas`) e o endpoint `GET /metrics` os
+reporta. É o primeiro tijolo para medir VALOR (o agente vale a pena?), complementando
+o Langfuse, que mede o lado TÉCNICO (o agente funciona?).
+
+```bash
+curl http://localhost:8000/metrics
+# {"business_metrics": {"tarefas_concluidas": 3, "acoes_aprovadas": 1, ...}}
+```
+
+O contador é em memória (zera no restart) — suficiente para o laboratório. Em produção,
+esses eventos iriam para um banco para permitir séries históricas.
 
 ---
 
