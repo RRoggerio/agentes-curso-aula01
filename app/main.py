@@ -8,6 +8,7 @@ from langgraph.types import Command
 
 from app.graph import graph, approval_graph
 from app.metrics import record_event, get_metrics
+from app.mas import team_graph
 
 langfuse_handler = CallbackHandler()
 app = FastAPI(title="Agente de IA — Aula 5")
@@ -83,3 +84,22 @@ def resume(req: ResumeRequest):
 def metrics():
     """Métricas de NEGÓCIO acumuladas (complementa o Langfuse, que é técnico)."""
     return {"business_metrics": get_metrics()}
+
+
+class TeamRequest(BaseModel):
+    tarefa: str
+    thread_id: str = "default"
+
+
+@app.post("/team")
+def team(req: TeamRequest):
+    """Executa o time multiagente (supervisor + pesquisador + redator)."""
+    state = {
+        "messages": [{"role": "user", "content": req.tarefa}],
+        "tarefa": req.tarefa,
+        "pesquisa": "", "resposta": "",
+        "pesquisa_feita": False, "redacao_feita": False,
+    }
+    config = {"configurable": {"thread_id": req.thread_id}, "callbacks": [langfuse_handler]}
+    result = team_graph.invoke(state, config=config)
+    return {"resposta": result["resposta"], "etapas": [m.content for m in result["messages"]]}
