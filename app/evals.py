@@ -65,13 +65,17 @@ def run_evals(agente: Callable[[str], str], casos=CASOS) -> dict:
 
 def agente_do_projeto(entrada: str) -> str:
     """Chama o grafo do agente (Aula 5/6) e devolve o texto da resposta."""
-    from app.graph import graph
+    import asyncio
     import uuid
+    from app.graph import graph
     state = {
         "messages": [{"role": "user", "content": entrada}],
         "pending_action": None, "approved": None,
     }
     # thread_id único por caso: cada avaliação é uma conversa isolada.
     config = {"configurable": {"thread_id": f"eval-{uuid.uuid4()}"}}
-    result = graph.invoke(state, config=config)
+    # ainvoke: o agente pode usar tools MCP (async-only, Aula 9). O /evals roda
+    # numa thread sem event loop, então asyncio.run() executa a coroutine aqui —
+    # e mantém a interface síncrona (str -> str) que run_evals espera.
+    result = asyncio.run(graph.ainvoke(state, config=config))
     return result["messages"][-1].content
