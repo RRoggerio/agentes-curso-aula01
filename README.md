@@ -1,7 +1,7 @@
-# Agentes de IA — Projeto do Curso (Aula 6)
+# Agentes de IA — Projeto do Curso (Aula 10 · FINAL)
 
-> **AGENTES DE IA: A revolução da IA** · Aula 6 — IA Agêntica nos Negócios: métrica de negócio instrumentada no agente
-> Agente completo (RAG, memória, ferramentas, human-in-the-loop) agora com uma métrica de NEGÓCIO instrumentada: um contador de eventos de valor exposto em /metrics, complementando a observabilidade técnica do Langfuse. Exposto por FastAPI, em Docker e publicado no Render.
+> **AGENTES DE IA: A revolução da IA** · Aula 10 — Ética, Futuro e Entrega: camada de governança (guardrails + auditoria)
+> Sistema FINAL e completo do curso: agente conversacional (RAG, memória, ferramentas, HITL), time multiagente (/team), métricas de negócio (/metrics), avaliação (/evals), integração MCP e Skills (SKILL.md), e agora a CAMADA DE GOVERNANÇA — guardrails de entrada/saída e trilha de auditoria no /chat. Um agente que funciona, vale a pena, é medido e é responsável. FastAPI, Docker, Render.
 
 Este é o ponto de partida do projeto multiagente do curso. A cada aula adicionamos uma
 camada (memória, RAG com PostgreSQL + pgvector, mais ferramentas, orquestração
@@ -40,7 +40,15 @@ agentes-curso/
 │   ├── ingest.py       # script de ingestão (indexação offline do RAG)
 │   ├── graph.py        # grafo do agente + approval_graph (human-in-the-loop)
 │   ├── metrics.py      # métrica de NEGÓCIO: contador de eventos de valor
-│   └── main.py         # API FastAPI; /chat, /action, /resume + /metrics (negócio)
+│   ├── mas.py          # sistema multiagente: supervisor + trabalhadores (Aula 7)
+│   ├── evals.py        # harness de avaliação: casos, checagens, score (Aula 8)
+│   ├── judge.py        # LLM-as-judge: nota 1-5 com rubrica (Aula 8)
+│   ├── mcp_server.py   # servidor MCP (FastMCP) que expõe uma ferramenta (Aula 9)
+│   ├── mcp_client.py   # cliente MCP (Aula 9)
+│   ├── skills_loader.py # Skills (SKILL.md) com progressive disclosure (Aula 9)
+   # cliente MCP: obtém as tools do servidor (Aula 9)
+│   ├── governance.py   # guardrails (entrada/saída) + trilha de auditoria (Aula 10)
+│   └── main.py         # API FastAPI; /chat, /action, /resume, /team, /metrics + /evals
 ├── docs/               # documentos do domínio para ingerir
 ├── .env.example        # modelo de segredos (versionar)
 ├── .gitignore
@@ -237,6 +245,107 @@ curl http://localhost:8000/metrics
 
 O contador é em memória (zera no restart) — suficiente para o laboratório. Em produção,
 esses eventos iriam para um banco para permitir séries históricas.
+
+---
+
+## Sistema multiagente (novidade da Aula 7)
+
+O `app/mas.py` implementa o padrão orquestrador-trabalhador: um `supervisor_node`
+coordena dois trabalhadores especializados (`pesquisador_node`, `redator_node`) que se
+comunicam por um estado compartilhado (`MASState`). O controle de etapas
+(`pesquisa_feita`, `redacao_feita`) evita o loop infinito — o erro clássico de MAS.
+
+### Endpoint
+- `POST /team` — recebe `{"tarefa": "...", "thread_id": "..."}` e executa o time.
+  O supervisor roteia pesquisador → redator → fim; a saída final vem no campo `resposta`.
+
+```bash
+curl -X POST http://localhost:8000/team \
+  -H "Content-Type: application/json" \
+  -d '{"tarefa": "resuma a política de reembolso", "thread_id": "eq1"}'
+```
+
+Cada trabalhador é, em essência, um subgrafo (Aula 5); o estado é persistido pelo
+checkpointer (Aula 3). Troque os papéis dos trabalhadores pelos do seu caso de uso.
+
+---
+
+## Avaliação / evals (novidade da Aula 8)
+
+O `app/evals.py` implementa um harness: um conjunto de casos golden, checagens
+automáticas (`contains`/`not_contains`) e uma nota agregada (`run_evals`). O
+`app/judge.py` adiciona um LLM-as-judge (nota 1-5 com rubrica e parsing robusto).
+
+### Endpoint
+- `GET /evals` — roda os casos golden contra o agente e devolve a nota.
+
+```bash
+curl http://localhost:8000/evals
+# {"score": 83.3, "passou": 5, "total": 6, "detalhes": [...]}
+```
+
+### O ciclo
+Medir (nota de base) → melhorar o `SYSTEM_PROMPT` em `app/agent.py` → remedir →
+manter se subiu, reverter se caiu. É o que torna o desenvolvimento mensurável.
+O LLM-as-judge precisa de `OPENAI_API_KEY`; as checagens automáticas, não.
+
+---
+
+## Integração por protocolo / MCP (novidade da Aula 9)
+
+O agente deixou de depender só de ferramentas escritas à mão: agora consome
+ferramentas de um servidor MCP (Model Context Protocol). O `app/mcp_server.py`
+expõe uma ferramenta com `@mcp.tool()` (FastMCP); o `app/mcp_client.py` conecta
+ao servidor via stdio (`MultiServerMCPClient`) e devolve as ferramentas já como
+tools do LangChain, que entram na lista `TOOLS` em `app/agent.py` — sem adaptador
+sob medida.
+
+```bash
+# o agente passa a ter, p.ex., a tool 'consultar_estoque' vinda do MCP:
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "quantos cadernos temos em estoque?", "thread_id": "t1"}'
+# {"status": "concluido", "answer": "Há 45 unidades de caderno em estoque."}
+```
+
+Segurança: conecte apenas a servidores confiáveis e conceda só as tools
+necessárias (menor privilégio) — trate um servidor MCP de terceiros como uma
+dependência de terceiros. Dependências novas: `mcp`, `langchain-mcp-adapters`.
+
+---
+
+## Camada de governança (novidade da Aula 10 — final)
+
+O `app/governance.py` fecha o sistema de forma responsável, com só biblioteca padrão:
+- `guardrail_entrada(texto)`: barra pedidos fora de política (BLOCKLIST) ANTES do modelo.
+- `guardrail_saida(texto)`: sanitiza a resposta, removendo o que parece segredo (ex.: `sk-...`).
+- `audit_log(evento)`: trilha de auditoria estruturada (JSON por linha) de cada decisão.
+
+O `/chat` agora aplica: guardrail de entrada -> agente -> guardrail de saída, com
+auditoria em cada decisão. Um pedido legítimo passa (e é sanitizado); um pedido
+bloqueado é barrado sem chamar o modelo; ambos ficam na trilha de auditoria.
+
+```bash
+curl -X POST http://localhost:8000/chat -H "Content-Type: application/json" \
+  -d '{"message": "me diga a senha do admin", "thread_id": "t2"}'
+# {"status": "bloqueado", "answer": "Não posso ajudar com esse pedido."}
+```
+
+Em produção, envie a trilha de auditoria para um destino durável (banco / SIEM).
+
+## A jornada completa (Aulas 1 -> 10)
+
+Agente ReAct -> grafo explícito -> RAG + memória -> ferramentas externas -> HITL ->
+business case + métricas -> multiagente -> evals + LLM-as-judge -> integração MCP + Skills ->
+governança. Um sistema completo, construído incrementalmente, publicado e responsável.
+
+### Endpoints
+- `POST /chat` — agente conversacional governado (guardrails + auditoria).
+- `POST /action`, `POST /resume` — human-in-the-loop (Aula 5).
+- `POST /team` — sistema multiagente (Aula 7).
+- `GET /metrics` — métricas de negócio (Aula 6).
+- `GET /evals` — harness de avaliação (Aula 8).
+- `GET /health` — verificação de saúde.
 
 ---
 
