@@ -11,8 +11,8 @@ Critério: {criterio}
 Pergunta do usuário: {pergunta}
 Resposta do agente: {resposta}
 
-Pense brevemente e então devolva APENAS um JSON, sem texto ao redor:
-{{"justificativa": "", "nota": }}"""
+Pense brevemente e então devolva APENAS um JSON válido, sem texto ao redor,
+neste formato: {{"justificativa": "<uma frase>", "nota": <inteiro de 1 a 5>}}"""
 
 
 def parse_judge(texto: str) -> dict:

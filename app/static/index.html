@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seu Agente — Agentes de IA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+:root{
+  --dark:#084734; --dark2:#0B5E45; --lime:#C2FA75; --limedk:#8FCB3A;
+  --ink:#16261F; --mute:#5B6B63; --panel:#EFF7E4; --panel2:#F4F7F2;
+  --line:#D4E2CE; --white:#FFFFFF; --code:#0A3528;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  font-weight:300; color:var(--ink); background:var(--panel2);
+  line-height:1.55; font-size:15px;
+}
+.mono{font-family:'DM Mono','SFMono-Regular',Consolas,monospace}
+
+/* ---------- Cabeçalho ---------- */
+.hero{background:var(--dark); color:#eafbe0; padding:26px 0 24px}
+.hero .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hero .badge{width:44px;height:44px;border-radius:12px;background:var(--lime);
+  color:var(--dark);display:flex;align-items:center;justify-content:center;
+  font-weight:500;font-size:22px;flex:none}
+.hero h1{margin:0;font-size:23px;font-weight:500;letter-spacing:.2px}
+.hero .kick{color:var(--lime);font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:500;margin-bottom:2px}
+.hero .sub{color:#bfe0c8;font-size:13.5px;margin-top:2px}
+.hero .status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#bfe0c8}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mute)}
+.dot.on{background:var(--lime);box-shadow:0 0 0 3px rgba(194,250,117,.25)}
+.dot.off{background:#e0705f}
+
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+
+/* ---------- Contexto do produto ---------- */
+.setup{background:var(--white);border:1px solid var(--line);border-left:6px solid var(--dark);
+  border-radius:12px;padding:18px 20px;margin:22px 0}
+.setup h2{margin:0 0 4px;font-size:15px;font-weight:500;color:var(--dark)}
+.setup p{margin:0 0 10px;font-size:13px;color:var(--mute)}
+.setup textarea{width:100%;min-height:88px;resize:vertical;border:1px solid var(--line);
+  border-radius:9px;padding:11px 13px;font-family:inherit;font-size:14px;color:var(--ink);
+  background:var(--panel2);line-height:1.5}
+.setup textarea:focus{outline:none;border-color:var(--limedk);background:#fff}
+.setup .row{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dark);
+  background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:3px 11px}
+.tag .d{width:7px;height:7px;border-radius:50%;background:var(--mute)}
+.tag.on .d{background:var(--limedk)}
+
+/* ---------- Botões ---------- */
+.btn{font-family:inherit;font-weight:500;font-size:13.5px;cursor:pointer;border:none;
+  border-radius:9px;padding:9px 16px;transition:.15s;letter-spacing:.2px}
+.btn.p{background:var(--dark);color:#eafbe0}
+.btn.p:hover{background:var(--dark2)}
+.btn.l{background:var(--lime);color:var(--dark)}
+.btn.l:hover{background:#b4f560}
+.btn.g{background:var(--panel);color:var(--dark);border:1px solid var(--line)}
+.btn.g:hover{background:#e6f2d6}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ok{background:var(--lime);color:var(--dark)}
+.btn.no{background:#f7e2de;color:#a23b2a;border:1px solid #e6c3bb}
+
+/* ---------- Abas ---------- */
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 0}
+.tabs button{font-family:inherit;font-weight:500;font-size:13px;cursor:pointer;
+  background:none;border:1px solid var(--line);border-radius:20px;padding:7px 15px;
+  color:var(--mute);transition:.15s}
+.tabs button:hover{border-color:var(--limedk);color:var(--dark)}
+.tabs button.active{background:var(--dark);color:#eafbe0;border-color:var(--dark)}
+
+.panel{display:none;background:var(--white);border:1px solid var(--line);border-radius:14px;
+  padding:20px;margin:14px 0 40px;box-shadow:0 6px 22px rgba(8,71,52,.06)}
+.panel.active{display:block}
+.panel .lead{font-size:13px;color:var(--mute);margin:0 0 14px}
+.panel h3{margin:0 0 4px;font-size:16px;font-weight:500;color:var(--dark)}
+
+/* ---------- Chat ---------- */
+.chat{display:flex;flex-direction:column;gap:12px;min-height:220px;max-height:52vh;
+  overflow-y:auto;padding:4px 2px 8px}
+.msg{max-width:86%;padding:11px 14px;border-radius:13px;font-size:14.5px;white-space:pre-wrap;word-break:break-word}
+.msg.u{align-self:flex-end;background:var(--dark);color:#eafbe0;border-bottom-right-radius:4px}
+.msg.a{align-self:flex-start;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.block{align-self:flex-start;background:#f7e2de;border:1px solid #e6c3bb;color:#8a3324}
+.msg.block b{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;color:#a23b2a}
+.steps{align-self:flex-start;max-width:92%;display:flex;flex-direction:column;gap:5px;margin:-4px 0 0}
+.step{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--dark);
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+.step .k{color:var(--limedk);font-weight:500}
+.step .out{color:var(--mute);display:block;margin-top:2px;white-space:pre-wrap;word-break:break-word}
+.typing{align-self:flex-start;color:var(--mute);font-size:13px;font-style:italic}
+.inrow{display:flex;gap:9px;margin-top:12px}
+.inrow input,.inrow textarea{flex:1;border:1px solid var(--line);border-radius:10px;
+  padding:11px 14px;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--panel2)}
+.inrow input:focus,.inrow textarea:focus{outline:none;border-color:var(--limedk);background:#fff}
+
+/* ---------- Cartões de resultado ---------- */
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-top:12px}
+.card.warn{background:#fdf6e0;border-color:#e9dca6}
+.card .t{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--dark);font-weight:500;margin-bottom:6px}
+.card .big{font-size:14.5px}
+.propose{background:var(--dark);color:#eafbe0;border:none}
+.propose .t{color:var(--lime)}
+
+/* Métricas */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+.metric .n{font-size:26px;font-weight:500;color:var(--dark);font-family:'DM Mono',monospace;line-height:1}
+.metric .l{font-size:12px;color:var(--mute);margin-top:5px}
+
+/* Avaliação */
+.score{display:flex;align-items:baseline;gap:10px;margin-top:12px}
+.score .v{font-size:38px;font-weight:500;color:var(--dark);font-family:'DM Mono',monospace;line-height:1}
+.score .d{font-size:13px;color:var(--mute)}
+.checks{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.chk{display:flex;align-items:center;gap:9px;font-size:13px;padding:7px 11px;border-radius:8px;
+  background:var(--panel2);border:1px solid var(--line)}
+.chk .mk{width:18px;height:18px;border-radius:50%;flex:none;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:600}
+.chk .mk.p{background:var(--lime);color:var(--dark)}
+.chk .mk.f{background:#f2c9c1;color:#8a3324}
+.chk .cn{color:var(--mute);font-family:'DM Mono',monospace;font-size:11.5px}
+
+.err{background:#f7e2de;border:1px solid #e6c3bb;color:#8a3324;border-radius:10px;padding:11px 14px;margin-top:12px;font-size:13.5px}
+.hint{font-size:12px;color:var(--mute);margin-top:8px}
+footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--mute);font-size:12.5px;text-align:center}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="badge">◆</div>
+    <div>
+      <div class="kick">Agentes de IA · A revolução da IA</div>
+      <h1>Seu Agente</h1>
+      <div class="sub">A ideia que você definiu na Aula 1, agora viva — RAG, ferramentas, aprovação, time e governança.</div>
+    </div>
+    <div class="status"><span id="hdot" class="dot"></span><span id="htext">verificando…</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="setup">
+    <h2>Contexto do produto</h2>
+    <p>Cole aqui a descrição do produto que você criou na Aula 1. Ela enquadra o agente em cada resposta — sem apagar as ferramentas, o RAG e as skills que ele já tem.</p>
+    <textarea id="product" placeholder="Ex.: Somos uma varejista de eletrônicos. O assistente atende clientes sobre pedidos, trocas e reembolsos, com tom cordial e direto…"></textarea>
+    <div class="row">
+      <button class="btn l" id="saveProduct">Aplicar contexto</button>
+      <span class="tag" id="ctxTag"><span class="d"></span><span id="ctxLabel">nenhum contexto aplicado</span></span>
+    </div>
+  </section>
+
+  <nav class="tabs">
+    <button data-tab="chat" class="active">Conversa</button>
+    <button data-tab="approval">Aprovação</button>
+    <button data-tab="team">Time</button>
+    <button data-tab="metrics">Métricas</button>
+    <button data-tab="evals">Avaliação</button>
+  </nav>
+
+  <!-- CONVERSA -->
+  <section class="panel active" id="panel-chat">
+    <h3>Converse com o seu agente</h3>
+    <p class="lead">Cada resposta passa pela camada de governança (Aula 10) e pode acionar a base de conhecimento, ferramentas e skills (Aulas 3, 4, 9). Os passos do agente aparecem sob a resposta.</p>
+    <div class="chat" id="chat"></div>
+    <div class="inrow">
+      <input id="chatInput" placeholder="Pergunte algo ao seu agente…" autocomplete="off">
+      <button class="btn p" id="chatSend">Enviar</button>
+    </div>
+    <div class="hint">Teste também o guardrail: peça algo com a palavra “senha” e veja a Aula 10 barrar antes de chamar o modelo.</div>
+  </section>
+
+  <!-- APROVAÇÃO -->
+  <section class="panel" id="panel-approval">
+    <h3>Human-in-the-loop</h3>
+    <p class="lead">O agente propõe uma ação crítica e pausa. Nada acontece sem a sua decisão (Aula 5).</p>
+    <div class="inrow">
+      <input id="approvalInput" placeholder="Ex.: registre a transferência combinada" autocomplete="off">
+      <button class="btn p" id="approvalPropose">Propor ação</button>
+    </div>
+    <div id="approvalArea"></div>
+  </section>
+
+  <!-- TIME -->
+  <section class="panel" id="panel-team">
+    <h3>Time multiagente</h3>
+    <p class="lead">Um supervisor coordena um pesquisador e um redator até a entrega final (Aula 7).</p>
+    <div class="inrow">
+      <textarea id="teamInput" rows="2" placeholder="Ex.: escreva um resumo curto sobre a política de reembolso do produto"></textarea>
+    </div>
+    <div class="inrow" style="margin-top:9px">
+      <button class="btn p" id="teamRun">Rodar time</button>
+    </div>
+    <div id="teamArea"></div>
+  </section>
+
+  <!-- MÉTRICAS -->
+  <section class="panel" id="panel-metrics">
+    <h3>Métricas de negócio</h3>
+    <p class="lead">Contadores acumulados conforme você usa o agente — o complemento de negócio ao Langfuse técnico (Aula 6).</p>
+    <button class="btn g" id="metricsRefresh">Atualizar</button>
+    <div class="grid" id="metricsGrid"></div>
+  </section>
+
+  <!-- AVALIAÇÃO -->
+  <section class="panel" id="panel-evals">
+    <h3>Avaliação automática</h3>
+    <p class="lead">Roda os casos golden contra o agente pelo mesmo pipeline governado do chat e devolve a nota (Aula 8). Exige a chave da OpenAI no servidor.</p>
+    <button class="btn g" id="evalsRun">Rodar avaliação</button>
+    <div id="evalsArea"></div>
+  </section>
+
+</div>
+
+<footer>
+  Agentes de IA · A revolução da IA — Sergio Gaiotto · Direção de Dados e IA<br>
+  Projeto do curso · FastAPI · LangGraph · pgvector · Langfuse · Docker · Render
+</footer>
+
+<script>
+// ---- Estado da sessão ----
+const THREAD = sessionStorage.getItem('agent_thread') ||
+  ('web-' + Math.random().toString(36).slice(2, 10));
+sessionStorage.setItem('agent_thread', THREAD);
+
+const $ = s => document.querySelector(s);
+const el = (tag, cls, txt) => { const e = document.createElement(tag);
+  if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+
+async function api(path, method, body){
+  const opt = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opt.body = JSON.stringify(body);
+  const r = await fetch(path, opt);
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' em ' + path);
+  return r.json();
+}
+
+// ---- Health ----
+(async () => {
+  try { await api('/health', 'GET');
+    $('#hdot').className = 'dot on'; $('#htext').textContent = 'agente no ar';
+  } catch { $('#hdot').className = 'dot off'; $('#htext').textContent = 'sem conexão'; }
+})();
+
+// ---- Contexto do produto ----
+const productBox = $('#product');
+productBox.value = localStorage.getItem('agent_product') || '';
+refreshCtxTag();
+$('#saveProduct').onclick = () => {
+  localStorage.setItem('agent_product', productBox.value.trim());
+  refreshCtxTag(true);
+};
+function refreshCtxTag(justSaved){
+  const v = (localStorage.getItem('agent_product') || '').trim();
+  const tag = $('#ctxTag'), lbl = $('#ctxLabel');
+  if (v){ tag.classList.add('on');
+    lbl.textContent = justSaved ? 'contexto aplicado ✓' : 'contexto ativo (' + v.length + ' caracteres)';
+  } else { tag.classList.remove('on'); lbl.textContent = 'nenhum contexto aplicado'; }
+}
+const currentProduct = () => (localStorage.getItem('agent_product') || '').trim();
+
+// ---- Abas ----
+document.querySelectorAll('.tabs button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    $('#panel-' + b.dataset.tab).classList.add('active');
+  };
+});
+
+// ---- Rótulos amigáveis das ferramentas ----
+const TOOL_LABEL = {
+  knowledge_search: 'consultou a base de conhecimento',
+  lookup_cep: 'consultou o CEP',
+  calculator: 'calculou',
+  usar_skill: 'carregou uma skill',
+  consultar_estoque: 'consultou o estoque'
+};
+const toolLabel = n => TOOL_LABEL[n] || ('usou ' + n);
+
+// ---- Conversa ----
+const chat = $('#chat');
+function addMsg(cls, text){ const m = el('div', 'msg ' + cls, text); chat.appendChild(m);
+  chat.scrollTop = chat.scrollHeight; return m; }
+function addBlocked(text){ const w = el('div', 'msg block');
+  w.appendChild(el('b', null, 'Bloqueado pela governança'));
+  w.appendChild(document.createTextNode(text)); chat.appendChild(w);
+  chat.scrollTop = chat.scrollHeight; }
+function addSteps(steps){
+  if (!steps || !steps.length) return;
+  const box = el('div', 'steps');
+  steps.forEach(s => {
+    const line = el('div', 'step');
+    if (s.tipo === 'chamada'){
+      const args = s.args && Object.keys(s.args).length
+        ? ' · ' + JSON.stringify(s.args).slice(0, 90) : '';
+      line.innerHTML = '→ <span class="k">' + s.tool + '</span> ' + toolLabel(s.tool)
+        + '<span class="out">' + escapeHtml(args) + '</span>';
+    } else {
+      line.innerHTML = '← <span class="k">' + s.tool + '</span> retornou'
+        + '<span class="out">' + escapeHtml((s.conteudo || '').slice(0, 220)) + '</span>';
+    }
+    box.appendChild(line);
+  });
+  chat.appendChild(box); chat.scrollTop = chat.scrollHeight;
+}
+function escapeHtml(t){ const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+async function sendChat(){
+  const input = $('#chatInput'); const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; addMsg('u', text);
+  const btn = $('#chatSend'); btn.disabled = true;
+  const typing = el('div', 'typing', 'o agente está pensando…'); chat.appendChild(typing);
+  chat.scrollTop = chat.scrollHeight;
+  try {
+    const r = await api('/chat', 'POST',
+      { message: text, thread_id: THREAD, product: currentProduct() });
+    typing.remove();
+    if (r.status === 'bloqueado') addBlocked(r.answer);
+    else { addSteps(r.steps); addMsg('a', r.answer || '(sem resposta)'); }
+  } catch (e) { typing.remove(); addMsg('a', 'Erro ao falar com o agente: ' + e.message); }
+  finally { btn.disabled = false; input.focus(); }
+}
+$('#chatSend').onclick = sendChat;
+$('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+
+// ---- Aprovação ----
+const appArea = $('#approvalArea');
+$('#approvalPropose').onclick = async () => {
+  const msg = $('#approvalInput').value.trim() || 'execute a ação combinada';
+  appArea.innerHTML = '';
+  const btn = $('#approvalPropose'); btn.disabled = true;
+  try {
+    const r = await api('/action', 'POST', { message: msg, thread_id: THREAD });
+    if (r.status === 'aguardando_aprovacao'){
+      const card = el('div', 'card propose');
+      card.appendChild(el('div', 't', 'Ação proposta — aguardando você'));
+      card.appendChild(el('div', 'big', r.acao_proposta));
+      const row = el('div', 'inrow');
+      const ok = el('button', 'btn ok', 'Aprovar');
+      const no = el('button', 'btn no', 'Rejeitar');
+      ok.onclick = () => decide('aprovar'); no.onclick = () => decide('rejeitar');
+      row.appendChild(ok); row.appendChild(no); card.appendChild(row);
+      appArea.appendChild(card);
+    } else { showCard(appArea, 'Concluído', r.answer); }
+  } catch (e) { appArea.innerHTML = '<div class="err">' + e.message + '</div>'; }
+  finally { btn.disabled = false; }
+};
+async function decide(decision){
+  appArea.innerHTML = '';
+  try {
+    const r = await api('/resume', 'POST', { decision, thread_id: THREAD });
+    if (r.status === 'erro') appArea.innerHTML = '<div class="err">' + r.detail + '</div>';
+    else showCard(appArea, decision === 'aprovar' ? 'Aprovada' : 'Rejeitada', r.answer);
+  } catch (e) { appArea.innerHTML = '<div class="err">' + e.message + '</div>'; }
+}
+function showCard(container, title, body){
+  const c = el('div', 'card'); c.appendChild(el('div', 't', title));
+  c.appendChild(el('div', 'big', body)); container.appendChild(c);
+}
+
+// ---- Time ----
+const teamArea = $('#teamArea');
+$('#teamRun').onclick = async () => {
+  const tarefa = $('#teamInput').value.trim();
+  if (!tarefa) return;
+  teamArea.innerHTML = '<div class="hint">o time está trabalhando…</div>';
+  const btn = $('#teamRun'); btn.disabled = true;
+  try {
+    const r = await api('/team', 'POST', { tarefa, thread_id: THREAD + '-team-' + Date.now() });
+    teamArea.innerHTML = '';
+    showCard(teamArea, 'Entrega do time', r.resposta || '(sem resposta)');
+    if (r.etapas && r.etapas.length){
+      const c = el('div', 'card'); c.appendChild(el('div', 't', 'Etapas'));
+      r.etapas.forEach(e => { const p = el('div', 'big mono', '• ' + e);
+        p.style.marginTop = '5px'; p.style.fontSize = '12.5px'; c.appendChild(p); });
+      teamArea.appendChild(c);
+    }
+  } catch (e) { teamArea.innerHTML = '<div class="err">' + e.message + '</div>'; }
+  finally { btn.disabled = false; }
+};
+
+// ---- Métricas ----
+async function loadMetrics(){
+  const grid = $('#metricsGrid');
+  try {
+    const r = await api('/metrics', 'GET');
+    const m = r.business_metrics || {};
+    grid.innerHTML = '';
+    const keys = Object.keys(m);
+    if (!keys.length){ grid.innerHTML = '<div class="hint">nenhuma métrica ainda — use o agente e atualize.</div>'; return; }
+    keys.forEach(k => {
+      const cell = el('div', 'metric');
+      cell.appendChild(el('div', 'n', String(m[k])));
+      cell.appendChild(el('div', 'l', k.replace(/_/g, ' ')));
+      grid.appendChild(cell);
+    });
+  } catch (e) { grid.innerHTML = '<div class="err">' + e.message + '</div>'; }
+}
+$('#metricsRefresh').onclick = loadMetrics;
+
+// ---- Avaliação ----
+$('#evalsRun').onclick = async () => {
+  const area = $('#evalsArea');
+  area.innerHTML = '<div class="hint">rodando os casos… isso chama o modelo e pode levar alguns segundos.</div>';
+  const btn = $('#evalsRun'); btn.disabled = true;
+  try {
+    const r = await api('/evals', 'GET');
+    area.innerHTML = '';
+    const s = el('div', 'score');
+    s.appendChild(el('div', 'v', (r.score != null ? r.score : '—') + '%'));
+    s.appendChild(el('div', 'd', (r.passou ?? '?') + ' de ' + (r.total ?? '?') + ' checagens'));
+    area.appendChild(s);
+    const checks = el('div', 'checks');
+    (r.detalhes || []).forEach(caso => {
+      (caso.resultados || []).forEach(res => {
+        const row = el('div', 'chk');
+        const mk = el('div', 'mk ' + (res.passou ? 'p' : 'f'), res.passou ? '✓' : '×');
+        row.appendChild(mk);
+        row.appendChild(el('span', null, res.checagem));
+        row.appendChild(el('span', 'cn', caso.caso));
+        checks.appendChild(row);
+      });
+    });
+    area.appendChild(checks);
+  } catch (e) {
+    area.innerHTML = '<div class="err">' + e.message +
+      ' — verifique se OPENAI_API_KEY está definida no servidor.</div>';
+  } finally { btn.disabled = false; }
+};
+
+// primeira carga
+loadMetrics();
+addMsg('a', 'Olá. Sou o seu agente. Defina o contexto do produto acima e me pergunte algo sobre a sua ideia.');
+</script>
+</body>
+</html>

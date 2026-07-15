@@ -9,7 +9,7 @@ from langgraph.graph import StateGraph, START
 from langgraph.graph.message import add_messages
 from langgraph.types import Command
 
-from app.graph import build_checkpointer
+from app.graph import checkpointer  # o MESMO checkpointer das Aulas 3/5
 
 class MASState(TypedDict):
     # --- dados ---
@@ -72,7 +72,7 @@ def build_team_graph():
     # O time sempre começa pelo supervisor; o resto é roteamento dinâmico.
     builder.add_edge(START, "supervisor")
 
-    return builder.compile(checkpointer=build_checkpointer())
+    return builder.compile(checkpointer=checkpointer)
 
 
 team_graph = build_team_graph()

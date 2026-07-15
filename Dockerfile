@@ -8,8 +8,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o código da aplicação
+# Copia o código da aplicação e os artefatos que ele lê em runtime.
+# skills/ é OBRIGATÓRIO: sem ele, o progressive disclosure (Aula 9)
+# fica vazio em produção. docs/ permite rodar a ingestão no container.
 COPY ./app ./app
+COPY ./skills ./skills
+COPY ./docs ./docs
 
 # O Render injeta a porta na variável $PORT. --host 0.0.0.0 é obrigatório
 # para o serviço aceitar tráfego externo. Usamos a exec form (lista) do CMD.

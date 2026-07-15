@@ -34,7 +34,7 @@ Infraestrutura, frameworks e RAG são open-source; o LLM começa na OpenAI e é 
 agentes-curso/
 ├── app/
 │   ├── __init__.py
-│   ├── agent.py        # ferramentas (calculator, knowledge_search, lookup_cep) + modelo
+│   ├── agent.py        # ferramentas (calculator, knowledge_search, lookup_cep, usar_skill) + tools MCP + modelo
 │   ├── tools_externas.py # ferramenta que chama uma API HTTP real (com tratamento de erros)
 │   ├── rag.py          # conexão pgvector, embeddings e vector store
 │   ├── ingest.py       # script de ingestão (indexação offline do RAG)
@@ -46,10 +46,10 @@ agentes-curso/
 │   ├── mcp_server.py   # servidor MCP (FastMCP) que expõe uma ferramenta (Aula 9)
 │   ├── mcp_client.py   # cliente MCP (Aula 9)
 │   ├── skills_loader.py # Skills (SKILL.md) com progressive disclosure (Aula 9)
-   # cliente MCP: obtém as tools do servidor (Aula 9)
 │   ├── governance.py   # guardrails (entrada/saída) + trilha de auditoria (Aula 10)
 │   └── main.py         # API FastAPI; /chat, /action, /resume, /team, /metrics + /evals
 ├── docs/               # documentos do domínio para ingerir
+├── skills/             # Agent Skills (SKILL.md) — copiadas para a imagem Docker
 ├── .env.example        # modelo de segredos (versionar)
 ├── .gitignore
 ├── .dockerignore
@@ -281,7 +281,10 @@ automáticas (`contains`/`not_contains`) e uma nota agregada (`run_evals`). O
 
 ```bash
 curl http://localhost:8000/evals
-# {"score": 83.3, "passou": 5, "total": 6, "detalhes": [...]}
+# {"score": 85.7, "passou": 7, "total": 8, "detalhes": [...]}
+
+# Com o LLM-as-judge (nota 1-5 por caso; exige OPENAI_API_KEY):
+curl "http://localhost:8000/evals?judge=true"
 ```
 
 ### O ciclo
@@ -311,6 +314,11 @@ curl -X POST http://localhost:8000/chat \
 Segurança: conecte apenas a servidores confiáveis e conceda só as tools
 necessárias (menor privilégio) — trate um servidor MCP de terceiros como uma
 dependência de terceiros. Dependências novas: `mcp`, `langchain-mcp-adapters`.
+
+**Skills (progressive disclosure completo):** no boot, só os metadados de cada
+`SKILL.md` entram no system prompt (nível 1). O nível 2 é operante: o agente
+chama a ferramenta `usar_skill(nome)` para carregar as instruções completas
+sob demanda — mantendo o contexto enxuto até a skill ser necessária.
 
 ---
 
@@ -344,7 +352,7 @@ governança. Um sistema completo, construído incrementalmente, publicado e resp
 - `POST /action`, `POST /resume` — human-in-the-loop (Aula 5).
 - `POST /team` — sistema multiagente (Aula 7).
 - `GET /metrics` — métricas de negócio (Aula 6).
-- `GET /evals` — harness de avaliação (Aula 8).
+- `GET /evals` — harness de avaliação (Aula 8); `?judge=true` adiciona o LLM-as-judge.
 - `GET /health` — verificação de saúde.
 
 ---
